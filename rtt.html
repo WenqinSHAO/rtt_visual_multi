@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+div#container {
+  resize: vertical;
+  height: 80vh;
+  width: 95vw;
+  border:1px solid #999;
+  overflow: scroll;
+}
+input {
+    margin: 5px
+}
+p#status {
+    font-family: monospace;
+}
+</style>
+<link rel="stylesheet" type="text/css" href="./js_lib/metricsgraphics.css">
+<body>
+<div id="date_input" style="font-family: sans-serif; font-size: 12px; font-weight: oblique">
+    <input type="file", id="file_input", accept=".json" ><br>
+    From: <input type="text" id="beginDate" value="2016-10-01 0h" />
+    To: <input type="text" id="endDate" value="2016-10-08 0h"/>
+    <input name="updateButton" id ="update" type="button" value="Plot" />
+    <input name="updateButton" id ="previous" type="button" value="Days before <-" />
+    <input type="number" min="0" max="356" step="1" value="7" id="daystep">
+    <input name="updateButton" id ="next" type="button" value="-> Days after" />
+</div>
+</body>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script type="text/javascript" src='./js_lib/vis.js'></script>
