@@ -16,17 +16,17 @@ interface for navigating the trace.
 However, it falls short in following aspects:
 
 1. not possible to group probe by the path traversed;
-2. not scalable to enough to filter out probes from measurements involving
+2. not scalable enough to filter out probes from measurements involving
 a great number of probes, say RIPE Atlas built-in measurements;
-3. the visual presentation is adapted to the case where hundreds of probes could be involved.
+3. the visual presentation is not adapted to the case where hundreds of probes could be involved.
 
 # How to use it?
 1. Extract groups of probe traces indicated in txt files and parse them in json format fit for plotting.
 2. Select json file visualize it with the tool.
 
 ## RTT trace extraction
-Ping measurement from RIPE Atlas are the input.
-In a previous project we collected ping measurements from more than 6000 probes toward DNS b-root over 3 month.
+Ping measurements from RIPE Atlas are the input.
+In a previous project, we collected ping measurements from more than 6000 probes toward DNS b-root over 3 months.
 These traces are cut into chunks and stored in multiple files, see the [docs](https://github.com/WenqinSHAO/rtt/blob/master/docs/data_collection.md)
 for more details.
 
@@ -57,7 +57,7 @@ optional arguments:
 
 The generated json file has the same prefix/name as the txt file with probe IDs.
 The json is in the following format:
-```json
+```
 {
   "probe ID in string": [
     {
@@ -68,8 +68,9 @@ The json is in the following format:
       ...
     }
     ...
-    ],
-  "another probe ID in string": []
+  ],
+  "another probe ID in string": [{...},...],
+  ...
 }
 ```
 
