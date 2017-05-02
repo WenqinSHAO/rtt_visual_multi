@@ -1,3 +1,4 @@
+"""This script fetches for each link indicated in a directory the RTT traces of probes that passes through that link"""
 import json
 import traceback
 import logging
@@ -9,6 +10,15 @@ from collections import defaultdict
 
 
 def worker(fn, probe_list):
+    """for each trace chunk fn, extract the RTT measurements of probes specified in the probe_list
+
+    Args:
+        fn (string): file path to the trace chunk
+        probe_list (list of string): probe trace to be extracted within this chunk
+
+    Returns:
+        res (dict): {pb:[{epoch: timestamp in epoch seconds, value: the metric to be plotted here is min_rtt},...] for pb in probe_list}
+    """
     t3 = time.time()
     try:
         with open(os.path.join(fn), 'r') as fp:
@@ -42,7 +52,7 @@ def worker_wrapper(args):
 
 def main():
     t1 = time.time()
-    # log to data_collection.log file
+    # log to queryrtt.log file
     logging.basicConfig(filename='queryrtt.log', level=logging.DEBUG,
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S %z')
@@ -60,16 +70,12 @@ def main():
     parser.add_argument("-s", "--chunckSuffix",
                         help="chunks suffix is distinguish different measurements, say, 1010.json, v4 ping for b-root",
                         action='store')
-    #parser.add_argument("-t", "--stopTime",
-    #                    help="the ending moment for traceroute rendering, format %s" % "%%Y-%%m-%%d %%H:%%M:%%S %%z",
-    #                    action='store')
-    #parser.add_argument("-o", "--outfile",
-    #                    help="Specify the name of output .json file",
-    #                   action="store")
+
     args = parser.parse_args()
     args_dict = vars(args)
 
     if not all(map(bool, args_dict.values())):
+        # all the parameters must be set
         print args.help
         return
 
@@ -85,11 +91,13 @@ def main():
         logging.critical("%s doesn't exist." % args.traceDirectory)
         return
 
+    # check if the specified chunkSuffix is valid in the given traceDirectory
     try:
         _ = next(iter([i for i in os.listdir(args.traceDirectory) if i.endswith(args.chunckSuffix)]))
     except StopIteration:
         logging.critical("No trace file in %s ends with suffix %s" % (args.traceDirectory, args.chunckSuffix))
 
+    # given a probe id, in which chunk id shall we look for its traces
     probe2chunk = dict()
     try:
         with open(args.indexFile, 'r') as fp:
@@ -99,8 +107,11 @@ def main():
                     probe2chunk[pb.strip()] = chunk.strip()
     except IOError as e:
         logging.error(e)
+        return
 
+    # each file in probeDirecotry represents the probes that passes that link
     link2probe = defaultdict(list)
+    # what are the probes to be retrived per trace chunk
     taskperchunk = defaultdict(list)
     for fn in [i for i in os.listdir(args.probeDirectory) if i.endswith('.txt')]:
         try:
@@ -118,12 +129,12 @@ def main():
             logging.error(e)
 
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    res = pool.map(worker_wrapper, taskperchunk.items())
-    res = {k: v for d in res for k, v in d.items()}
+    res = pool.map(worker_wrapper, taskperchunk.items())  # for each chunk trace, retrieve the probes traces
+    res = {k: v for d in res for k, v in d.items()}  # merge the resulted list of dictionary
 
     for l in link2probe:
         out_fn = os.path.join(args.probeDirectory, l+'.json')
-        rtts = {pb: res.get(pb) for pb in link2probe.get(l)}
+        rtts = {pb: res.get(pb) for pb in link2probe.get(l)}  # for each link file, fetch traces for probes that passes it
         json.dump(rtts, open(out_fn, 'w'))
 
     t2 = time.time()
