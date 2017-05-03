@@ -54,31 +54,22 @@ var update = d3.select("input#update")
      .on('click', function() {
         d3.event.stopPropagation();
         d3.event.preventDefault();
-        begin = tparser(document.getElementById("beginDate").value);
-        end = tparser(document.getElementById("endDate").value);
-        plot();
+        updateHandler()
         return false;
     });
+
+function updateHandler() {
+    begin = tparser(document.getElementById("beginDate").value);
+    end = tparser(document.getElementById("endDate").value);
+    plot();
+}
 
 // once pressed the button, right shift (move forward in time) the currently indicated date range, then plot
 var next = d3.select("input#next")
     .on('click', function() {
         d3.event.stopPropagation();
         d3.event.preventDefault();
-
-        begin = tparser(document.getElementById("beginDate").value);
-        end = tparser(document.getElementById("endDate").value);
-
-        step = parseInt(document.getElementById("daystep").value)
-
-        begin = addDays(begin, step);
-        end = addDays(end, step);
-
-        document.getElementById("beginDate").value = tformatter(begin);
-        document.getElementById("endDate").value = tformatter(end);
-
-        plot();
-
+        navigateHandler(true);
         return false;
     });
 
@@ -87,20 +78,30 @@ var previous = d3.select("input#previous")
     .on('click', function() {
         d3.event.stopPropagation();
         d3.event.preventDefault();
-        begin = tparser(document.getElementById("beginDate").value);
-        end = tparser(document.getElementById("endDate").value);
-
-        step = parseInt(document.getElementById("daystep").value)
-
-        begin = addDays(begin, -1*step);
-        end = addDays(end, -1*step);
-        document.getElementById("beginDate").value = tformatter(begin);
-        document.getElementById("endDate").value = tformatter(end);
-
-        plot();
-
+        navigateHandler(false);
         return false;
     });
+
+function navigateHandler(is_forward) {
+
+    begin = tparser(document.getElementById("beginDate").value);
+    end = tparser(document.getElementById("endDate").value);
+
+    step = parseInt(document.getElementById("daystep").value)
+
+    if (is_forward == true) {
+        begin = addDays(begin, step);
+        end = addDays(end, step);
+    } else {
+        begin = addDays(begin, -1*step);
+        end = addDays(end, -1*step);
+    }
+
+    document.getElementById("beginDate").value = tformatter(begin);
+    document.getElementById("endDate").value = tformatter(end);
+
+    plot();
+}
 
 function plot() {
     var file = document.getElementById("file_input");
@@ -143,7 +144,7 @@ function drawlines(data) {
 
     var first = true; // the axis of the first lien has different style form others
     var line_strength = 1; // the opacity of liens
-    var plot_width = 2000; // the size of plot for each trace
+    var plot_width = 1200; // the size of plot for each trace
     var plot_height = 450;
 
     // for each trace, a g will be created with following shift with regard to the svg
@@ -177,6 +178,11 @@ function drawlines(data) {
             ed_idx = datetimeSearch(data[pb], ed_epoch_msec); // search for the index range for plot
             //console.log(pb + ":{bg_idx:" + bg_idx + ", ed_idx:" + ed_idx+"}");
             //console.log(pb + ":{bg_idx:" + data[pb][bg_idx].epoch + ", ed_idx:" + data[pb][ed_idx].epoch+", ed_idx-1:" + data[pb][ed_idx-1].epoch + "}")
+
+            var div = d3.select("body").append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
             if (ed_idx > bg_idx && bg_idx >= 0) {
                 for(var i = bg_idx; i < ed_idx; i++) {
                     var v = data[pb][i];
@@ -218,6 +224,29 @@ function drawlines(data) {
                 var yaxis = g.append("g").call(d3.axisLeft(y));
 
                 if (first) {
+                    g.selectAll("dot")
+                        .data(data_to_plot)
+                    .enter().append("rect")
+                        .attr("x", function(d) {return x(d.epoch) - 5;})
+                        .attr("y", function(d) {return y(d.value) - 10;})
+                        .attr("width", 10)
+                        .attr("height", function(d) {return 30;})
+                        .attr("opacity", 0)
+                        //.attr("cx", function(d) {return x(d.epoch);})
+                        //.attr("cy", function(d) {return y(d.value);})
+                        .on("mouseover", function(d) {
+                            div.transition()
+                                .duration(200)
+                                .style("opacity", .7);
+                            div.html(tformatter(d.epoch))
+                                .style("left", (d3.event.pageX - 80) + "px")
+                                .style("top", (d3.event.pageY - 28) + "px");
+                        })
+                        .on("mouseout", function(d) {
+                            div.transition()
+                                .duration(200)
+                                .style("opacity", 0);
+                        });
                     first = false;
                 } else {
                     // if no longer the first plot, change a little bit the style
@@ -272,3 +301,20 @@ function drawlines(data) {
     var t1 = performance.now();
     d3.select("#status").text(Object.keys(data).length + " probes scoped, " + pb_count + " plotted in "+ parseFloat(Math.round((t1-t0) * 100) / 100).toFixed(2) + " milliseconds. ");
 }
+
+d3.select('body')
+    .on("keydown", function (){
+        switch(d3.event.keyCode) {
+            case 13:
+                updateHandler();
+                break;
+            case 39:
+                navigateHandler(true);
+                break;
+            case 37:
+                navigateHandler(false);
+                break;
+            default:
+                break;
+        }
+    });
