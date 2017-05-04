@@ -21,7 +21,7 @@ var opened_f;
 var loaded_data;
 
 // the plotting time range, and the range moving step in day count
-var begin, end, step;
+var begin, end, min_y, max_y, step;
 // time parser and formatter, all un UTC
 var tparser = d3.utcParse("%Y-%m-%d %Hh");
 var tformatter = d3.utcFormat("%Y-%m-%d %Hh");
@@ -58,9 +58,17 @@ var update = d3.select("input#update")
         return false;
     });
 
-function updateHandler() {
+function setPlotParam(){
     begin = tparser(document.getElementById("beginDate").value);
     end = tparser(document.getElementById("endDate").value);
+    min_y = parseFloat(document.getElementById("min_y").value);
+    max_y = parseFloat(document.getElementById("max_y").value);
+    step = parseInt(document.getElementById("daystep").value);
+}
+
+
+function updateHandler() {
+    setPlotParam();
     plot();
 }
 
@@ -83,11 +91,7 @@ var previous = d3.select("input#previous")
     });
 
 function navigateHandler(is_forward) {
-
-    begin = tparser(document.getElementById("beginDate").value);
-    end = tparser(document.getElementById("endDate").value);
-
-    step = parseInt(document.getElementById("daystep").value)
+    setPlotParam();
 
     if (is_forward == true) {
         begin = addDays(begin, step);
@@ -188,7 +192,7 @@ function drawlines(data) {
                     var v = data[pb][i];
                     //var dt = new Date(v.epoch);
                     //dt.setUTCSeconds(v.epoch);
-                    if ((v !== undefined) && (v !== null) && v.hasOwnProperty("value") && 0 < v.value && v.value < 800) {
+                    if ((v !== undefined) && (v !== null) && v.hasOwnProperty("value") && min_y <= v.value && v.value < max_y) {
                         // filter out records with extreme values
                         // could be something configurable globally
                         data_to_plot.push({epoch: v.epoch * 1000, value: v.value})
@@ -211,7 +215,7 @@ function drawlines(data) {
 
                 // the value range from data
                 x.domain([bg_epoch_msec, ed_epoch_msec]);
-                y.domain([0, 800]);
+                y.domain([min_y, max_y]);
 
                 // add x, y axis for each trace, x axis is at the bottom of the plot thus down shifted by the plot height
                 var xaxis = g.append("g").attr("transform", "translate(0," + plot_height+ ")").call(d3.axisBottom(x).tickFormat(tformatter));
@@ -304,17 +308,18 @@ function drawlines(data) {
 
 d3.select('body')
     .on("keydown", function (){
-        switch(d3.event.keyCode) {
-            case 13:
-                updateHandler();
-                break;
-            case 39:
-                navigateHandler(true);
-                break;
-            case 37:
-                navigateHandler(false);
-                break;
-            default:
-                break;
+        if (d3.event.shiftKey) {
+            switch(d3.event.keyCode) {
+                case 39:
+                    navigateHandler(true);
+                    break;
+                case 37:
+                    navigateHandler(false);
+                    break;
+                default:
+                    break;
+            }
+        } else if (d3.event.keyCode == 13){
+            updateHandler();
         }
     });

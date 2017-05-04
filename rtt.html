@@ -21,7 +21,7 @@ div.tooltip {
     height: 14px;
     padding: 2px;
     font: 10px sans-serif;
-    background: lightsteelblue;
+    background: #fd8d3c;
     border: 0px;
     border-radius: 8px;
     pointer-events: none;
@@ -30,13 +30,15 @@ div.tooltip {
 <link rel="stylesheet" type="text/css" href="./js_lib/metricsgraphics.css">
 <body>
 <div id="date_input" style="font-family: sans-serif; font-size: 12px; font-weight: oblique">
-    <input type="file", id="file_input", accept=".json" ><br>
     From: <input type="text" id="beginDate" value="2016-10-01 0h" />
-    To: <input type="text" id="endDate" value="2016-10-08 0h"/>
+    To: <input type="text" id="endDate" value="2016-10-02 0h"/>
+    Min Y: <input type="number" id="min_y"  value="0" />
+    Max Y: <input type="number" id="max_y"  value="200" /><br>
     <input name="updateButton" id ="update" type="button" value="Plot" />
     <input name="updateButton" id ="previous" type="button" value="Days before <-" />
-    <input type="number" min="0" max="356" step="1" value="7" id="daystep">
+    <input type="number" min="0" max="356" step="1" value="1" id="daystep">
     <input name="updateButton" id ="next" type="button" value="-> Days after" />
+    <input type="file", id="file_input", accept=".json" >
 </div>
 </body>
 <script src="https://d3js.org/d3.v4.min.js"></script>

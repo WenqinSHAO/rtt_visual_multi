@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 
 
-def worker(fn, probe_list):
+def worker(fn, probe_list, v_name):
     """for each trace chunk fn, extract the RTT measurements of probes specified in the probe_list
 
     Args:
@@ -31,7 +31,7 @@ def worker(fn, probe_list):
     for pb in probe_list:
         pb_rec = trace.get(pb, None)
         if pb_rec:
-            for t, v in zip(pb_rec.get('epoch', []), pb_rec.get('min_rtt', [])):
+            for t, v in zip(pb_rec.get('epoch', []), pb_rec.get(v_name, [])):
                 res[pb].append(dict(epoch=t, value=v))
         else:
             logging.error("Probe %s not found in %s" % (pb, fn))
@@ -70,6 +70,9 @@ def main():
     parser.add_argument("-s", "--chunckSuffix",
                         help="chunks suffix is distinguish different measurements, say, 1010.json, v4 ping for b-root",
                         action='store')
+    parser.add_argument("-v", "--valueName",
+                        help="the value name in trace json that you want to extract",
+                        action="store")
 
     args = parser.parse_args()
     args_dict = vars(args)
@@ -129,11 +132,11 @@ def main():
             logging.error(e)
 
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    res = pool.map(worker_wrapper, taskperchunk.items())  # for each chunk trace, retrieve the probes traces
+    res = pool.map(worker_wrapper, [(k, v, args.valueName) for k, v in taskperchunk.items()])  # for each chunk trace, retrieve the probes traces
     res = {k: v for d in res for k, v in d.items()}  # merge the resulted list of dictionary
 
     for l in link2probe:
-        out_fn = os.path.join(args.probeDirectory, l+'.json')
+        out_fn = os.path.join(args.probeDirectory, l + '_' + args.valueName+'.json')
         rtts = {pb: res.get(pb) for pb in link2probe.get(l)}  # for each link file, fetch traces for probes that passes it
         json.dump(rtts, open(out_fn, 'w'))
 
