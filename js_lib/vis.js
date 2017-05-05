@@ -16,18 +16,32 @@ var margin = {top: 20, right: 20, bottom: 30, left: 50};
 var width = +svg.attr("width") - margin.left - margin.right;
 var height = +svg.attr("height") - margin.top - margin.bottom;
 
+
+
+
 // the current opened File object and the data loaded in memeory
 var opened_f;
 var loaded_data;
 
 // the plotting time range, and the range moving step in day count
-var begin, end, min_y, max_y, step, plot_width, plot_height, x_step, y_step, perspective, colored;
+var begin, end, min_y, max_y, step, plot_width, plot_height, x_step, y_step, perspective, colored, plot_type;
 // time parser and formatter, all un UTC
 var tparser = d3.utcParse("%Y-%m-%d %Hh");
 var tformatter = d3.utcFormat("%Y-%m-%d %Hh");
 
 
 var linecolor = d3.scaleOrdinal(d3.schemeCategory10);
+
+d3.selectAll("input[name='plot_type']")
+    .on("change", function(){
+        plot_type = this.value;
+        if(this.value == "pers") {
+            document.getElementById('pers_param').style.display = "block";
+        } else {
+            document.getElementById('pers_param').style.display = "none";
+        }
+    });
+
 
 function datetimeSearch(arr, v) {
     // binary search that return the first index i with arr[i].epoch > v
@@ -72,7 +86,6 @@ function setPlotParam(){
     x_step = parseFloat(document.getElementById("x_step").value);
     y_step = parseFloat(document.getElementById("y_step").value);
     perspective = parseFloat(document.getElementById("perspective").value);
-    colored = document.getElementById("monocolor").checked;
 }
 
 
@@ -182,13 +195,22 @@ function drawlines(data) {
     var ed_epoch_msec = end.getTime();
     //console.log(bg_epoch_msec + ":" + ed_epoch_msec);
 
-    if (colored) {
-        var legend = svg.append("g")
+    switch(plot_type) {
+        case "colorline":
+            var legend = svg.append("g")
                         .attr("transform", "translate(0," + height + ")")
                         .attr("id", "legend");
-        perspective = 1;
-        x_step = 0;
-        y_step = 0;
+            perspective = 1;
+            x_step = 0;
+            y_step = 0;
+            break;
+        case "multi" :
+            perspective = 1;
+            x_step = 0;
+            y_step = plot_height;
+            break;
+        default:
+            break;
     }
 
     for (var pb in data) {
@@ -300,7 +322,7 @@ function drawlines(data) {
                     .text(pb);
 
                 // plot the trace
-                if (colored) {
+                if (plot_type == "colorline") {
                     g.append("path")
                         .datum(data_to_plot)
                         .attr("fill", "none")
@@ -346,7 +368,7 @@ function drawlines(data) {
         }
     }
     var t1 = performance.now();
-    d3.select("#status").text(Object.keys(data).length + " probes scoped, " + pb_count + " plotted in "+ parseFloat(Math.round((t1-t0) * 100) / 100).toFixed(2) + " milliseconds. ");
+    d3.select("#status").text(Object.keys(data).length + " timeseries scoped, " + pb_count + " plotted in "+ parseFloat(Math.round((t1-t0) * 100) / 100).toFixed(2) + " milliseconds. ");
 }
 
 d3.select('body')
