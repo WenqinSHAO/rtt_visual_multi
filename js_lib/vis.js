@@ -21,10 +21,13 @@ var opened_f;
 var loaded_data;
 
 // the plotting time range, and the range moving step in day count
-var begin, end, min_y, max_y, step;
+var begin, end, min_y, max_y, step, plot_width, plot_height, x_step, y_step, perspective, colored;
 // time parser and formatter, all un UTC
 var tparser = d3.utcParse("%Y-%m-%d %Hh");
 var tformatter = d3.utcFormat("%Y-%m-%d %Hh");
+
+
+var linecolor = d3.scaleOrdinal(d3.schemeCategory10);
 
 function datetimeSearch(arr, v) {
     // binary search that return the first index i with arr[i].epoch > v
@@ -64,6 +67,12 @@ function setPlotParam(){
     min_y = parseFloat(document.getElementById("min_y").value);
     max_y = parseFloat(document.getElementById("max_y").value);
     step = parseInt(document.getElementById("daystep").value);
+    plot_width = parseFloat(document.getElementById("plot_width").value);
+    plot_height = parseFloat(document.getElementById("plot_height").value);
+    x_step = parseFloat(document.getElementById("x_step").value);
+    y_step = parseFloat(document.getElementById("y_step").value);
+    perspective = parseFloat(document.getElementById("perspective").value);
+    colored = document.getElementById("monocolor").checked;
 }
 
 
@@ -148,8 +157,8 @@ function drawlines(data) {
 
     var first = true; // the axis of the first lien has different style form others
     var line_strength = 1; // the opacity of liens
-    var plot_width = 1200; // the size of plot for each trace
-    var plot_height = 450;
+    //var plot_width = 1200; // the size of plot for each trace
+    //var plot_height = 450;
 
     // for each trace, a g will be created with following shift with regard to the svg
     // after plotting one trace, the shift will be correspondingly modified for the next plot
@@ -158,8 +167,8 @@ function drawlines(data) {
     var x_shift = margin.left;
 
     var fade = 0.99; // the opacity of liens decreases at this rate
-    var step = 8; // the shift of next plot from current one
-    var perspective = 0.995; // the rate at which the above shift decreases trace after trace
+    //var step = 8; // the shift of next plot from current one
+    //var perspective = 0.995; // the rate at which the above shift decreases trace after trace
 
     var pb_count = 0;
 
@@ -172,6 +181,15 @@ function drawlines(data) {
     var bg_epoch_msec = begin.getTime(); // begin and end time in milliseconds
     var ed_epoch_msec = end.getTime();
     //console.log(bg_epoch_msec + ":" + ed_epoch_msec);
+
+    if (colored) {
+        var legend = svg.append("g")
+                        .attr("transform", "translate(0," + height + ")")
+                        .attr("id", "legend");
+        perspective = 1;
+        x_step = 0;
+        y_step = 0;
+    }
 
     for (var pb in data) {
         if ((data[pb] !== undefined) && (data[pb] !== null)) {
@@ -282,23 +300,48 @@ function drawlines(data) {
                     .text(pb);
 
                 // plot the trace
-                g.append("path")
-                    .datum(data_to_plot)
-                    .attr("fill", "none")
-                    .attr("stroke", "steelblue")
-                    .attr("stroke-linejoin", "round")
-                    .attr("stroke-linecap", "round")
-                    .attr("stroke-width", 1.5)
-                    .attr("opacity", Math.max(line_strength, 0.3))
-                    .attr("d", line);
+                if (colored) {
+                    g.append("path")
+                        .datum(data_to_plot)
+                        .attr("fill", "none")
+                        .attr("stroke", linecolor(pb_count))
+                        .attr("stroke-linejoin", "round")
+                        .attr("stroke-linecap", "round")
+                        .attr("stroke-width", 1.5)
+                        .attr("opacity", Math.max(line_strength, 0.3))
+                        .attr("d", line);
+
+                    var lab = legend.append("g")
+                                .attr("transform", "translate(" + pb_count* 50 + ",15)")
+                                .attr("id", "lgd" + pb);
+                    lab.append("circle")
+                        .attr("r", 4)
+                        .attr("fill", linecolor(pb_count));
+                    lab.append("text")
+                        .attr("text-anchor", "start")
+                        .attr("dy", ".32em")
+                        .attr("dx", "6")
+                        .text(pb);
+                } else {
+                    g.append("path")
+                        .datum(data_to_plot)
+                        .attr("fill", "none")
+                        .attr("stroke", "steelblue")
+                        .attr("stroke-linejoin", "round")
+                        .attr("stroke-linecap", "round")
+                        .attr("stroke-width", 1.5)
+                        .attr("opacity", Math.max(line_strength, 0.3))
+                        .attr("d", line);
+                }
 
                 // update the shift, the shift step, line opacity, plot size for next plot
-                x_shift += step;
-                y_shift = y_shift - step*0.8 + (1-perspective) * plot_height;
+                x_shift += x_step;
+                y_shift = y_shift - y_step + (1-perspective) * plot_height;
                 line_strength *= fade;
                 plot_height *= perspective;
                 plot_width *= perspective;
-                step *= perspective;
+                x_step *= perspective;
+                y_step *= perspective;
             }
         }
     }
