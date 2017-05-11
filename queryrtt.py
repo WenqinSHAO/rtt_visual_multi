@@ -68,7 +68,7 @@ def main():
                         help="the file that maps probe ID to chunk IDs",
                         action="store")
     parser.add_argument("-s", "--chunckSuffix",
-                        help="chunks suffix is distinguish different measurements, say, 1010.json, v4 ping for b-root",
+                        help="chunks suffix to distinguish different measurements, say, 1010.json, v4 ping for b-root",
                         action='store')
     parser.add_argument("-v", "--valueName",
                         help="the value name in trace json that you want to extract",
@@ -99,6 +99,7 @@ def main():
         _ = next(iter([i for i in os.listdir(args.traceDirectory) if i.endswith(args.chunckSuffix)]))
     except StopIteration:
         logging.critical("No trace file in %s ends with suffix %s" % (args.traceDirectory, args.chunckSuffix))
+        return
 
     # given a probe id, in which chunk id shall we look for its traces
     probe2chunk = dict()
@@ -120,7 +121,8 @@ def main():
         try:
             with open(os.path.join(args.probeDirectory, fn), 'r') as fp:
                 for line in fp:
-                    link = fn.split('.')[0]
+                    # link = fn.split('.')[0]
+                    link = fn[:-4]
                     pb = filter(lambda s: s.isdigit(), line.strip())
                     link2probe[link].append(pb)
                     chunkid = probe2chunk.get(pb, None)
