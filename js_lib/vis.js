@@ -32,6 +32,7 @@ var tformatter = d3.utcFormat("%Y-%m-%d %Hh");
 
 var linecolor = d3.scaleOrdinal(d3.schemeCategory10);
 
+// toggle the presence of parameter settings for perspective plot
 d3.selectAll("input[name='plot_type']")
     .on("change", function(){
         plot_type = this.value;
@@ -41,7 +42,6 @@ d3.selectAll("input[name='plot_type']")
             document.getElementById('pers_param').style.display = "none";
         }
     });
-
 
 function datetimeSearch(arr, v) {
     // binary search that return the first index i with arr[i].epoch > v
@@ -129,12 +129,19 @@ function navigateHandler(is_forward) {
     plot();
 }
 
+var div = d3.select("body").append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
+var blockLines = [];
+
 function plot() {
     var file = document.getElementById("file_input");
     if ('files' in file && file.files.length > 0) {
         var f = file.files[0]; // get the first file selected by the file input
         if (f) {
             if (f != opened_f) {
+                blockLines = [];
                 // only proceed if it differs from the file already opened
                 d3.select("#status").text("Reading data file...");
                 var reader = new FileReader();
@@ -213,6 +220,8 @@ function drawlines(data) {
             break;
     }
 
+
+
     for (var pb in data) {
         if ((data[pb] !== undefined) && (data[pb] !== null)) {
 
@@ -222,10 +231,6 @@ function drawlines(data) {
             ed_idx = datetimeSearch(data[pb], ed_epoch_msec); // search for the index range for plot
             //console.log(pb + ":{bg_idx:" + bg_idx + ", ed_idx:" + ed_idx+"}");
             //console.log(pb + ":{bg_idx:" + data[pb][bg_idx].epoch + ", ed_idx:" + data[pb][ed_idx].epoch+", ed_idx-1:" + data[pb][ed_idx-1].epoch + "}")
-
-            var div = d3.select("body").append("div")
-                    .attr("class", "tooltip")
-                    .style("opacity", 0);
 
             if (ed_idx > bg_idx && bg_idx >= 0) {
                 for(var i = bg_idx; i < ed_idx; i++) {
@@ -326,6 +331,7 @@ function drawlines(data) {
                     g.append("path")
                         .datum(data_to_plot)
                         .attr("fill", "none")
+                        .attr("id", "p" + pb)
                         .attr("stroke", linecolor(pb_count))
                         .attr("stroke-linejoin", "round")
                         .attr("stroke-linecap", "round")
@@ -338,15 +344,40 @@ function drawlines(data) {
                                 .attr("id", "lgd" + pb);
                     lab.append("circle")
                         .attr("r", 4)
-                        .attr("fill", linecolor(pb_count));
+                        .attr("title", pb)
+                        .style("cursor", "pointer")
+                        .attr("fill", linecolor(pb_count))
+                        .on("click", function(d) {
+                            var hdler = d3.select(this);
+                            if (hdler.classed("block")) {
+                                hdler.classed("block", false);
+                                blockLines.splice(blockLines.indexOf(hdler.attr("title")), 1);
+                                hdler.attr("opacity", 1);
+                                svg.select("path#p" + hdler.attr("title")).style("display","");
+                            } else {
+                                hdler.classed("block", true);
+                                blockLines.push(hdler.attr("title"));
+                                hdler.attr("opacity", .2);
+                                svg.select("path#p" + hdler.attr("title")).style("display","none");
+                            }
+                        });
                     lab.append("text")
                         .attr("text-anchor", "start")
                         .attr("dy", ".32em")
                         .attr("dx", "6")
                         .text(pb);
+
+                    if (blockLines.includes(pb)) {
+                        svg.select("circle[title='" + pb + "']")
+                            .classed("block", true)
+                            .attr("opacity", .2);
+                        svg.select("path#p" + pb).style("display","none");
+                    }
+
                 } else {
                     g.append("path")
                         .datum(data_to_plot)
+                        .attr("id", "p" + pb)
                         .attr("fill", "none")
                         .attr("stroke", "steelblue")
                         .attr("stroke-linejoin", "round")
