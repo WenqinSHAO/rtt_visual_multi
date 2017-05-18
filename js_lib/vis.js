@@ -24,7 +24,7 @@ var opened_f;
 var loaded_data;
 
 // the plotting time range, and the range moving step in day count
-var begin, end, min_y, max_y, step, plot_width, plot_height, x_step, y_step, perspective, colored, plot_type;
+var begin, end, min_y, max_y, marco_step, micro_step, plot_width, plot_height, x_step, y_step, perspective, colored, plot_type;
 // time parser and formatter, all un UTC
 var tparser = d3.utcParse("%Y-%m-%d %Hh");
 var tformatter = d3.utcFormat("%Y-%m-%d %Hh");
@@ -66,6 +66,12 @@ function addDays(date, days) {
     return result;
 }
 
+function addHours(date, hours) {
+    var result = new Date(date);
+    result.setHours(result.getHours() + hours);
+    return result;
+}
+
 // once pressed the button, plot the data scoped by currently indicated date
 var update = d3.select("input#update")
      .on('click', function() {
@@ -78,13 +84,19 @@ var update = d3.select("input#update")
 function setPlotParam(){
     begin = tparser(document.getElementById("beginDate").value);
     end = tparser(document.getElementById("endDate").value);
+
     min_y = parseFloat(document.getElementById("min_y").value);
     max_y = parseFloat(document.getElementById("max_y").value);
-    step = parseInt(document.getElementById("daystep").value);
+
+    marco_step = parseInt(document.getElementById("daystep").value); // unit in day
+    micro_step = Math.floor(Math.abs(begin - end) / 36e5); // unit in hour
+
     plot_width = parseFloat(document.getElementById("plot_width").value);
     plot_height = parseFloat(document.getElementById("plot_height").value);
+
     x_step = parseFloat(document.getElementById("x_step").value);
     y_step = parseFloat(document.getElementById("y_step").value);
+
     perspective = parseFloat(document.getElementById("perspective").value);
 }
 
@@ -99,7 +111,7 @@ var next = d3.select("input#next")
     .on('click', function() {
         d3.event.stopPropagation();
         d3.event.preventDefault();
-        navigateHandler(true);
+        navigateHandler(true, true);
         return false;
     });
 
@@ -108,19 +120,25 @@ var previous = d3.select("input#previous")
     .on('click', function() {
         d3.event.stopPropagation();
         d3.event.preventDefault();
-        navigateHandler(false);
+        navigateHandler(false, true);
         return false;
     });
 
-function navigateHandler(is_forward) {
+function navigateHandler(is_forward, is_marco_step) {
+    // update the beginning and end time of the plot according to navigation operations
+    // is_forward (bool): advance in time if set to true
+    // is macro_step (bool): when true the shifting step size is taken from web page input
+    // when false, the step size is auto set to the current plot range
+    // when using keyboard short cut to navigate, this param is set to true, otherwise false
     setPlotParam();
+    var sign = is_forward? 1: -1;
 
-    if (is_forward == true) {
-        begin = addDays(begin, step);
-        end = addDays(end, step);
+    if (is_marco_step == true) {
+        begin = addDays(begin, sign * marco_step);
+        end = addDays(end, sign * marco_step);
     } else {
-        begin = addDays(begin, -1*step);
-        end = addDays(end, -1*step);
+        begin = addHours(begin, sign * micro_step);
+        end = addHours(end, sign * micro_step);
     }
 
     document.getElementById("beginDate").value = tformatter(begin);
@@ -340,7 +358,7 @@ function drawlines(data) {
                         .attr("d", line);
 
                     var lab = legend.append("g")
-                                .attr("transform", "translate(" + pb_count* 50 + ",15)")
+                                .attr("transform", "translate(" + pb_count* 90 + ",15)")
                                 .attr("id", "lgd" + pb);
                     lab.append("circle")
                         .attr("r", 4)
@@ -407,10 +425,10 @@ d3.select('body')
         if (d3.event.shiftKey) {
             switch(d3.event.keyCode) {
                 case 39:
-                    navigateHandler(true);
+                    navigateHandler(true, false);
                     break;
                 case 37:
-                    navigateHandler(false);
+                    navigateHandler(false, false);
                     break;
                 default:
                     break;
